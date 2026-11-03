@@ -24,10 +24,11 @@ Targets the memos **v0.x API** (`/api/v1/...`, verified against v0.30.0):
 ## Install
 
 ```sh
+npm install && npm run build   # first time only: src/*.ts → lib/
 dsh plugin --profile web add link:/path/to/dsh-memos
 ```
 
-Restart `dsh web`. No build step — `lib/index.js` is pure ESM with zero runtime dependencies.
+Restart `dsh web`. Source is TypeScript (`src/`); `lib/` is `tsc` output with zero runtime dependencies. During development use `npm run dev` (watch mode).
 
 ## Configure
 
