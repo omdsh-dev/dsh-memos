@@ -38,7 +38,7 @@ check("token masked", view.masked.includes("****") && !view.masked.includes("fak
 // 3. Unconfigured path (fresh store, no config) — but only if no real config file exists
 const emptyStore = new MemosStore();
 emptyStore.config = { serverUrl: "", accessToken: "" };
-const statusEmpty = await memosStatusTool(emptyStore).execute();
+const statusEmpty = await memosStatusTool(emptyStore).execute({});
 check("status unconfigured", statusEmpty.configured === false);
 
 // 4. Live instance: fake PAT. memos answers ListMemos anonymously (200, public
