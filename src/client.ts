@@ -104,19 +104,32 @@ window.__ModuleLoader__.load({
 
 		//#region styles
 		/**
-		 * Interactive controls get a stylesheet class so :focus/:hover/:disabled
-		 * work; values mirror dsh-gonic's .dsg-input/.dsg-btn so both panels
-		 * read as one family. All colors come from the host's --dsw-alias-*
-		 * token layer (defined by dsh-client-ui-theme on body, light + dark),
-		 * so the panel follows the stock theme and any skin plugin alike.
+		 * One small stylesheet so :focus/:hover/:disabled work. Class names are
+		 * plugin-scoped (.dsm-*) but every value mirrors dsh-gonic's .dsg-*
+		 * form kit, so all settings panels read as one family. All colors come
+		 * from the host's --dsw-alias-* layer (defined by dsh-client-ui-theme
+		 * on body, light + dark) — they resolve with or without a skin plugin.
 		 */
 		const STYLE_ID = "dsm-styles";
 		const STYLES = [
+			".dsm-form{display:flex;flex-direction:column;gap:10px;max-width:420px;padding:16px}",
+			".dsm-form-title{font-size:14px;font-weight:600;margin:0;color:var(--dsw-alias-label-primary)}",
+			".dsm-note{color:var(--dsw-alias-label-secondary);font-size:12px;line-height:1.6}",
+			".dsm-note-warn{color:var(--dsw-alias-state-warn-label);font-size:12px;line-height:1.6}",
+			".dsm-field{display:flex;flex-direction:column;gap:4px}",
+			".dsm-label{font-size:12px;color:var(--dsw-alias-label-secondary)}",
 			".dsm-input{width:100%;box-sizing:border-box;padding:6px 10px;border-radius:var(--dsw-radius-md);border:1px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-layer-1);color:var(--dsw-alias-label-primary);font-size:13px;outline:none}",
 			".dsm-input:focus{border-color:var(--dsw-alias-brand-primary)}",
 			".dsm-btn{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:var(--dsw-radius-md);border:1px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-layer-1);color:var(--dsw-alias-label-primary);cursor:pointer;font-size:13px}",
 			".dsm-btn:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover)}",
-			".dsm-btn:disabled{opacity:.5;cursor:default}"
+			".dsm-btn[data-primary=\"1\"]{background:var(--dsw-alias-brand-primary);border-color:var(--dsw-alias-brand-primary);color:var(--dsw-alias-bg-base)}",
+			".dsm-btn:disabled{opacity:.5;cursor:default}",
+			".dsm-ok{color:var(--dsw-alias-state-success-primary);font-size:12px}",
+			".dsm-err{color:var(--dsw-alias-state-error-primary);font-size:12px;padding:6px 4px}",
+			".dsm-actions{display:flex;gap:6px;align-items:center;flex-wrap:wrap}",
+			".dsm-preview{font-size:12px;border-top:1px solid var(--dsw-alias-border-l2);padding-top:8px;display:flex;flex-direction:column;gap:6px;color:var(--dsw-alias-label-primary)}",
+			".dsm-preview-item{line-height:1.5}",
+			".dsm-preview-meta{color:var(--dsw-alias-label-caption);margin-right:6px}"
 		].join("\n");
 		function ensureStyles(): void {
 			if (document.getElementById(STYLE_ID)) return;
@@ -125,34 +138,6 @@ window.__ModuleLoader__.load({
 			el.textContent = STYLES;
 			document.head.appendChild(el);
 		}
-		const s: Record<string, import("react").CSSProperties> = {
-			card: {
-				display: "flex",
-				flexDirection: "column",
-				gap: "10px",
-				maxWidth: "560px",
-				padding: "14px 16px",
-				borderRadius: "var(--dsw-radius-lg)",
-				border: "1px solid var(--dsw-alias-border-l2)",
-				fontSize: "13px",
-				color: "var(--dsw-alias-label-primary)"
-			},
-			title: { fontWeight: 600, fontSize: "13px", margin: 0 },
-			status: { fontSize: "12px", color: "var(--dsw-alias-label-secondary)" },
-			statusWarn: { fontSize: "12px", color: "var(--dsw-alias-state-warn-label)" },
-			row: { display: "flex", gap: "6px", alignItems: "center", flexWrap: "wrap" },
-			msg: { fontSize: "12px", whiteSpace: "pre-wrap", wordBreak: "break-all", color: "var(--dsw-alias-label-secondary)" },
-			preview: {
-				fontSize: "12px",
-				borderTop: "1px solid var(--dsw-alias-border-l2)",
-				paddingTop: "8px",
-				display: "flex",
-				flexDirection: "column",
-				gap: "6px"
-			},
-			previewItem: { lineHeight: 1.5 },
-			previewMeta: { color: "var(--dsw-alias-label-caption)", marginRight: "6px" }
-		};
 		//#endregion
 
 		/** Status line for the current config view. */
@@ -169,13 +154,13 @@ window.__ModuleLoader__.load({
 			const [accessToken, setAccessToken] = React.useState("");
 			const [preview, setPreview] = React.useState<PreviewItem[] | null>(null);
 			const [busy, setBusy] = React.useState(false);
-			const [msg, setMsg] = React.useState("");
+			const [msg, setMsg] = React.useState<{ text: string; ok: boolean } | null>(null);
 
 			const refresh = React.useCallback(async () => {
 				try {
 					setView(await api.getConfig());
 				} catch (error) {
-					setMsg("读取配置失败: " + String(error instanceof Error ? error.message : error));
+					setMsg({ text: "读取配置失败: " + String(error instanceof Error ? error.message : error), ok: false });
 				}
 			}, []);
 			React.useEffect(() => { refresh(); }, [refresh]);
@@ -183,11 +168,11 @@ window.__ModuleLoader__.load({
 			/** Run one async panel action with busy/message bookkeeping. */
 			const run = async (action: () => Promise<void>) => {
 				setBusy(true);
-				setMsg("");
+				setMsg(null);
 				try {
 					await action();
 				} catch (error) {
-					setMsg("操作失败: " + String(error instanceof Error ? error.message : error));
+					setMsg({ text: "操作失败: " + String(error instanceof Error ? error.message : error), ok: false });
 				} finally {
 					setBusy(false);
 				}
@@ -196,7 +181,9 @@ window.__ModuleLoader__.load({
 			const save = () => run(async () => {
 				const next = await api.setConfig({ serverUrl, accessToken });
 				setView(next);
-				setMsg(next.configured ? "配置已保存。" : "配置已保存（尚不完整：服务器地址和令牌都需要）。");
+				setMsg(next.configured
+					? { text: "配置已保存。", ok: true }
+					: { text: "配置已保存（尚不完整：服务器地址和令牌都需要）。", ok: false });
 			});
 			const clear = () => run(async () => {
 				const next = await api.setConfig({ reset: true });
@@ -204,52 +191,56 @@ window.__ModuleLoader__.load({
 				setServerUrl("");
 				setAccessToken("");
 				setPreview(null);
-				setMsg("配置已清除。");
+				setMsg({ text: "配置已清除。", ok: true });
 			});
 			const test = () => run(async () => {
 				const result = await api.test();
-				setMsg((result.ok ? "[ok] " : "[failed] ") + result.message);
+				setMsg({ text: result.message, ok: Boolean(result.ok) });
 			});
 			const loadPreview = () => run(async () => {
 				const result = await api.preview();
 				if (result.ok) {
 					setPreview(Array.isArray(result.memos) ? result.memos : []);
-					setMsg(result.memos && result.memos.length ? "" : "读取成功，当前没有笔记。");
+					setMsg(result.memos && result.memos.length ? null : { text: "读取成功，当前没有笔记。", ok: true });
 				} else {
 					setPreview(null);
-					setMsg("[failed] " + result.message);
+					setMsg({ text: result.message ?? "预览失败", ok: false });
 				}
 			});
 
 			const configured = Boolean(view && view.configured);
-			return h("div", { style: s.card },
-				h("p", { style: s.title }, "Memos 笔记（usememos 自托管 · 只读）"),
-				h("div", { style: configured ? s.status : s.statusWarn }, statusText(view)),
-				h("input", {
-					className: "dsm-input",
-					placeholder: "memos 服务器地址（如 https://memos.example.com）",
-					value: serverUrl,
-					onChange: (event) => setServerUrl(event.target.value)
-				}),
-				h("input", {
-					className: "dsm-input",
-					placeholder: "访问令牌 PAT（memos 设置 → Access Tokens 创建）",
-					value: accessToken,
-					onChange: (event) => setAccessToken(event.target.value)
-				}),
-				h("div", { style: s.row },
-					h("button", { className: "dsm-btn", onClick: save, disabled: busy }, "保存配置"),
+			return h("div", { className: "dsm-form" },
+				h("p", { className: "dsm-form-title" }, "Memos 笔记（usememos 自托管 · 只读）"),
+				h("div", { className: configured ? "dsm-note" : "dsm-note-warn" }, statusText(view)),
+				h("div", { className: "dsm-field" },
+					h("label", { className: "dsm-label" }, "服务器地址"),
+					h("input", {
+						className: "dsm-input",
+						placeholder: "https://memos.example.com",
+						value: serverUrl,
+						onChange: (event) => setServerUrl(event.target.value)
+					})),
+				h("div", { className: "dsm-field" },
+					h("label", { className: "dsm-label" }, "访问令牌（PAT）"),
+					h("input", {
+						className: "dsm-input",
+						placeholder: "memos 设置 → Access Tokens 创建",
+						value: accessToken,
+						onChange: (event) => setAccessToken(event.target.value)
+					})),
+				h("div", { className: "dsm-actions" },
+					h("button", { className: "dsm-btn", "data-primary": "1", onClick: save, disabled: busy }, "保存配置"),
 					h("button", { className: "dsm-btn", onClick: test, disabled: busy || !configured }, "测试连接"),
 					h("button", { className: "dsm-btn", onClick: clear, disabled: busy || !configured }, "清除配置"),
 					h("button", { className: "dsm-btn", onClick: loadPreview, disabled: busy || !configured }, "预览最近笔记")
 				),
-				preview !== null && h("div", { style: s.preview },
-					preview.map((m) => h("div", { key: m.id, style: s.previewItem },
-						h("span", { style: s.previewMeta }, (m.createTime || "").slice(0, 10) + (m.pinned ? " · 置顶" : "")),
+				msg !== null && h("div", { className: msg.ok ? "dsm-ok" : "dsm-err" }, msg.text),
+				preview !== null && h("div", { className: "dsm-preview" },
+					preview.map((m) => h("div", { key: m.id, className: "dsm-preview-item" },
+						h("span", { className: "dsm-preview-meta" }, (m.createTime || "").slice(0, 10) + (m.pinned ? " · 置顶" : "")),
 						(m.snippet || "").slice(0, 120) + (m.truncated ? "…" : "")
 					))
-				),
-				msg !== "" && h("div", { style: s.msg }, msg)
+				)
 			);
 		}
 
