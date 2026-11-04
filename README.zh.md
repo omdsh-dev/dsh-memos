@@ -23,12 +23,24 @@
 
 ## 安装
 
+已发布的版本自带编译好的 `lib/` 产物，直接装 tarball 即可：
+
 ```sh
-# 本地安装（link）
+# 从最新 release 安装（零运行时依赖，无需构建）
+dsh plugin --profile web add "https://github.com/omdsh-dev/dsh-memos/releases/latest/download/pkg.tgz"
+```
+
+本地开发用 link 方式：
+
+```sh
+npm install --legacy-peer-deps && npm run build   # 仅首次：src/*.ts → lib/
 dsh plugin --profile web add link:/path/to/dsh-memos
 ```
 
-重启 `dsh web` 生效。插件无需构建——`lib/index.js` 是纯 ESM、零运行时依赖。
+（加 `--legacy-peer-deps` 是因为 `@deepseek-ai/*` 开发闭包过不了严格 peer 解析。）
+
+重启 `dsh web` 生效。源码是 TypeScript（`src/`）；`lib/` 是 `tsc` 输出——纯 ESM、零运行时依赖。
+开发时用 `npm run dev`（watch 模式）。
 
 ## 配置
 

@@ -23,10 +23,21 @@ Targets the memos **v0.x API** (`/api/v1/...`, verified against v0.30.0):
 
 ## Install
 
+Published releases carry the compiled `lib/` output, so the tarball needs no
+build:
+
 ```sh
-npm install && npm run build   # first time only: src/*.ts → lib/
+dsh plugin --profile web add "https://github.com/omdsh-dev/dsh-memos/releases/latest/download/pkg.tgz"
+```
+
+For local development, link the checkout instead:
+
+```sh
+npm install --legacy-peer-deps && npm run build   # first time only: src/*.ts → lib/
 dsh plugin --profile web add link:/path/to/dsh-memos
 ```
+
+(`--legacy-peer-deps` because the `@deepseek-ai/*` dev closure fails strict peer resolution.)
 
 Restart `dsh web`. Source is TypeScript (`src/`); `lib/` is `tsc` output with zero runtime dependencies. During development use `npm run dev` (watch mode).
 
