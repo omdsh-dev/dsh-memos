@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Memos 笔记",
+    "description": "memos（usememos 自托管笔记）只读集成：填入服务器地址与访问令牌后，可让 agent 搜索、列举、读取笔记，设置面板还提供最近笔记预览。"
+  }
+}

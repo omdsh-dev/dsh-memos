@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Memos",
+    "description": "Read-only memos (usememos) integration: point it at your self-hosted server with a personal access token, then search, list and read your notes from the agent — plus a settings panel with a live preview."
+  }
+}
