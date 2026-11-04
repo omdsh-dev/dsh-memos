@@ -103,6 +103,28 @@ window.__ModuleLoader__.load({
 		//#endregion
 
 		//#region styles
+		/**
+		 * Interactive controls get a stylesheet class so :focus/:hover/:disabled
+		 * work; values mirror dsh-gonic's .dsg-input/.dsg-btn so both panels
+		 * read as one family. All colors come from the host's --dsw-alias-*
+		 * token layer (defined by dsh-client-ui-theme on body, light + dark),
+		 * so the panel follows the stock theme and any skin plugin alike.
+		 */
+		const STYLE_ID = "dsm-styles";
+		const STYLES = [
+			".dsm-input{width:100%;box-sizing:border-box;padding:6px 10px;border-radius:var(--dsw-radius-md);border:1px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-layer-1);color:var(--dsw-alias-label-primary);font-size:13px;outline:none}",
+			".dsm-input:focus{border-color:var(--dsw-alias-brand-primary)}",
+			".dsm-btn{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:var(--dsw-radius-md);border:1px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-layer-1);color:var(--dsw-alias-label-primary);cursor:pointer;font-size:13px}",
+			".dsm-btn:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover)}",
+			".dsm-btn:disabled{opacity:.5;cursor:default}"
+		].join("\n");
+		function ensureStyles(): void {
+			if (document.getElementById(STYLE_ID)) return;
+			const el = document.createElement("style");
+			el.id = STYLE_ID;
+			el.textContent = STYLES;
+			document.head.appendChild(el);
+		}
 		const s: Record<string, import("react").CSSProperties> = {
 			card: {
 				display: "flex",
@@ -110,45 +132,26 @@ window.__ModuleLoader__.load({
 				gap: "10px",
 				maxWidth: "560px",
 				padding: "14px 16px",
-				borderRadius: "10px",
-				border: "1px solid rgba(128,128,128,0.3)",
+				borderRadius: "var(--dsw-radius-lg)",
+				border: "1px solid var(--dsw-alias-border-l2)",
 				fontSize: "13px",
-				color: "inherit"
+				color: "var(--dsw-alias-label-primary)"
 			},
 			title: { fontWeight: 600, fontSize: "13px", margin: 0 },
-			status: { fontSize: "12px", opacity: 0.85 },
-			statusWarn: { fontSize: "12px", opacity: 0.9, color: "#c9763a" },
+			status: { fontSize: "12px", color: "var(--dsw-alias-label-secondary)" },
+			statusWarn: { fontSize: "12px", color: "var(--dsw-alias-state-warn-label)" },
 			row: { display: "flex", gap: "6px", alignItems: "center", flexWrap: "wrap" },
-			input: {
-				width: "100%",
-				boxSizing: "border-box",
-				padding: "5px 8px",
-				borderRadius: "6px",
-				border: "1px solid rgba(128,128,128,0.35)",
-				background: "rgba(128,128,128,0.08)",
-				color: "inherit",
-				fontSize: "12px"
-			},
-			button: {
-				padding: "4px 10px",
-				borderRadius: "6px",
-				cursor: "pointer",
-				border: "1px solid rgba(128,128,128,0.4)",
-				background: "rgba(128,128,128,0.14)",
-				color: "inherit",
-				fontSize: "12px"
-			},
-			msg: { fontSize: "12px", whiteSpace: "pre-wrap", wordBreak: "break-all", opacity: 0.9 },
+			msg: { fontSize: "12px", whiteSpace: "pre-wrap", wordBreak: "break-all", color: "var(--dsw-alias-label-secondary)" },
 			preview: {
 				fontSize: "12px",
-				borderTop: "1px solid rgba(128,128,128,0.25)",
+				borderTop: "1px solid var(--dsw-alias-border-l2)",
 				paddingTop: "8px",
 				display: "flex",
 				flexDirection: "column",
 				gap: "6px"
 			},
 			previewItem: { lineHeight: 1.5 },
-			previewMeta: { opacity: 0.6, marginRight: "6px" }
+			previewMeta: { color: "var(--dsw-alias-label-caption)", marginRight: "6px" }
 		};
 		//#endregion
 
@@ -223,22 +226,22 @@ window.__ModuleLoader__.load({
 				h("p", { style: s.title }, "Memos 笔记（usememos 自托管 · 只读）"),
 				h("div", { style: configured ? s.status : s.statusWarn }, statusText(view)),
 				h("input", {
-					style: s.input,
+					className: "dsm-input",
 					placeholder: "memos 服务器地址（如 https://memos.example.com）",
 					value: serverUrl,
 					onChange: (event) => setServerUrl(event.target.value)
 				}),
 				h("input", {
-					style: s.input,
+					className: "dsm-input",
 					placeholder: "访问令牌 PAT（memos 设置 → Access Tokens 创建）",
 					value: accessToken,
 					onChange: (event) => setAccessToken(event.target.value)
 				}),
 				h("div", { style: s.row },
-					h("button", { style: s.button, onClick: save, disabled: busy }, "保存配置"),
-					h("button", { style: s.button, onClick: test, disabled: busy || !configured }, "测试连接"),
-					h("button", { style: s.button, onClick: clear, disabled: busy || !configured }, "清除配置"),
-					h("button", { style: s.button, onClick: loadPreview, disabled: busy || !configured }, "预览最近笔记")
+					h("button", { className: "dsm-btn", onClick: save, disabled: busy }, "保存配置"),
+					h("button", { className: "dsm-btn", onClick: test, disabled: busy || !configured }, "测试连接"),
+					h("button", { className: "dsm-btn", onClick: clear, disabled: busy || !configured }, "清除配置"),
+					h("button", { className: "dsm-btn", onClick: loadPreview, disabled: busy || !configured }, "预览最近笔记")
 				),
 				preview !== null && h("div", { style: s.preview },
 					preview.map((m) => h("div", { key: m.id, style: s.previewItem },
@@ -265,6 +268,7 @@ window.__ModuleLoader__.load({
 		 */
 		function apply(ctx: ClientContext) {
 			try {
+				ensureStyles();
 				ctx.slots.inject("settings.section", () => ctx.slots.register({
 					name: "settings.section",
 					id: "memos",
