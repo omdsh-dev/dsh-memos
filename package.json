@@ -79,5 +79,12 @@
     "@types/node": "^26.6.6",
     "@types/react": "^19.3.0",
     "typescript": "^5.9.3"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/omdsh-dev/dsh-memos.git"
   }
 }
